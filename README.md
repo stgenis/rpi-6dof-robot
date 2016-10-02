@@ -30,7 +30,7 @@ For electronics, I am using:
 In addition, I am using an open-source python library from Adafruit to control the servo board.  The library can be found at the following URL, in the directory "Adafruit_PWM_Servo_Driver":
 https://github.com/adafruit/Adafruit-Raspberry-Pi-Python-Code.git
 
-You will need to set PYTHON_PATH to include the directory where Adafruit python library resides.  For example:
+You will need to set PYTHONPATH to include the directory where Adafruit python library resides.  For example:
 
 $  export PYTHONPATH='---Your-Path---/adafruit-library/Adafruit-Raspberry-Pi-Python-Code/Adafruit_PWM_Servo_Driver'
 
