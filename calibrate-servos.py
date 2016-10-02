@@ -58,7 +58,7 @@ k_servoJsonFilename = 'servo-settings.json'
 
 global  k_PWM_ON
 
-k_PWM_ON = 1    # Default is 0
+k_PWM_ON = 1    # Default is 1
 
 
 # =============================================================================
@@ -87,6 +87,9 @@ srvCur = [ ]
 def  main() :
 
   global  k_servoJsonFilename
+
+  # Initialize pwm object
+  pwm.setPWMFreq( 60 )  # Set frequecy to 60 Hertz
 
   restoreServoDefaults()
 
@@ -240,6 +243,7 @@ def  setServoPosition( srvNum ) :
   global  pwm, srvCur, k_PWM_ON
 
   pwm.setPWM( srvNum, k_PWM_ON, srvCur[ srvNum ] )
+  print 'DBG  Set servo %d to value %d' % ( srvNum, srvCur[ srvNum ] )
 
 
 # -----------------------------------------------------------------------------
