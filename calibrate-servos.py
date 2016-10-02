@@ -39,6 +39,10 @@ from Adafruit_PWM_Servo_Driver import PWM
 #  i+#   Increase gInc value by #
 #  i-#   Decrease gInc value by #
 #
+#  X=#   Set the final servo to control (counting from 0).  Note that this
+#        effects both the servo value display AND which servos are set.  All
+#        10 servos are still saved to the settings file, though.
+#
 #  D     Restore servo position, min, and max values to defaults
 #
 #  s  S  Save settings out to a JSON file "servo-settings.json"
@@ -65,19 +69,18 @@ k_PWM_ON = 1    # Default is 1
 # Globals
 # =============================================================================
 
-# global pwm
 # Initialise the PWM device using the default address (from Servo_Example.py)
 # Use pwm = PWM(0x40, debug=True) for debug output
 pwm = PWM(0x40)
 
-# global  gInc
 gInc = 10       # Default servo increment / decrement is 10
 
-# global  srvMin, srvMax, srvCur
 # These arrays are fully populated in restoreServoDefaults(), called in main()
 srvMin = [ ]
 srvMax = [ ]
 srvCur = [ ]
+
+lastSrv = 9
 
 
 # =============================================================================
@@ -110,7 +113,7 @@ def  main() :
 # -----------------------------------------------------------------------------
 def  mainLoop() :
 
-  global  srvCur, srvMin, srvMax, gInc, k_PWM_ON
+  global  srvCur, srvMin, srvMax, lastSrv, gInc, k_PWM_ON
 
   print
 
@@ -119,8 +122,9 @@ def  mainLoop() :
 
     print
     print 'Increment value is currently: %d' % gInc
+    print 'Last servo is currently: %d' % lastSrv
     print 'Servo values:'
-    for  c in range( 0, len( srvCur ) ) :
+    for  c in range( 0, lastSrv + 1 ) :
       print(  '  Servo %d:  Min %d  Cur %d  Max %d'
               % ( c, srvMin[ c ], srvCur[ c ], srvMax[ c ] )  )
 
@@ -144,7 +148,7 @@ def  mainLoop() :
 #
 def  parseCommand( cmd ) :
 
-  global  srvCur, srvMin, srvMax, gInc, k_servoJsonFilename
+  global  srvCur, srvMin, srvMax, lastSrv, gInc, k_servoJsonFilename
 
   if  re.match( '^[0-9][+-=<>]', cmd ) :  # -----------------------------------
 
@@ -214,6 +218,22 @@ def  parseCommand( cmd ) :
     saveServoJSON( k_servoJsonFilename )
     print 'Servo values saved to file %s' % k_servoJsonFilename
 
+  elif  cmd[ 0 ] == 'X' :  # --------------------------------------------------
+
+    if  len( cmd ) < 3 :
+      print 'Not enough information to set the last servo'
+
+    elif  cmd[1] != '=' :
+      print 'Incorrect syntax for setting the last servo'
+
+    else :
+
+      value = int( cmd[ 2: ] )
+
+      lastSrv = value
+      print(  'Last servo set to %d.  Servo range is now 0 through %d'
+              % ( lastSrv, lastSrv )  )
+
   elif  cmd == 'D' :  # -------------------------------------------------------
 
     restoreServoDefaults()    
@@ -249,13 +269,15 @@ def  setServoPosition( srvNum ) :
 # -----------------------------------------------------------------------------
 def  setAllServoPositions() :
 
-  for s in range( 0, 10 ) :  setServoPosition( s )
+  global  lastSrv
+
+  for s in range( 0, lastSrv + 1 ) :  setServoPosition( s )
 
 
 # -----------------------------------------------------------------------------
 def  loadServoJSON( fileName ) :
 
-  global  srvCur, srvMin, srvMax
+  global  srvCur, srvMin, srvMax, lastSrv, gInc
 
   if  not os.path.isfile( fileName ) :
     print 'Could not find JSON file to load with name %' % fileName
@@ -266,21 +288,27 @@ def  loadServoJSON( fileName ) :
     fIn = open( fileName, 'r' )
     jsonData = json.load( fIn )
 
+    origLst = lastSrv
+    origInc = gInc
     origCur = srvCur
     origMin = srvMin
     origMax = srvMax
 
-    srvCur = jsonData[ 'srvCur' ]
-    srvMin = jsonData[ 'srvMin' ]
-    srvMax = jsonData[ 'srvMax' ]
+    lastSrv  = jsonData[ 'lastSrv' ]
+    gInc     = jsonData[ 'gInc'    ]
+    srvCur   = jsonData[ 'srvCur'  ]
+    srvMin   = jsonData[ 'srvMin'  ]
+    srvMax   = jsonData[ 'srvMax'  ]
 
   except  Exception as e :
 
     print 'Unable to load from JSON file due to exception: %s' % str( e )
 
-    srvCur = origCur  # Restore to original values, so we do not leave any
-    srvMin = origMin  # of these arrays in an inconsistent state (i.e. some
-    srvMax = origMax  # loaded, some not)
+    srvCur   = origCur  # Restore to original values, so we do not leave any
+    srvMin   = origMin  # of these arrays in an inconsistent state (i.e. some
+    srvMax   = origMax  # loaded, some not)
+    lastSrv  = origLst
+    gInc     = origInc
 
   finally :  fIn.close()
 
@@ -288,11 +316,12 @@ def  loadServoJSON( fileName ) :
 # -----------------------------------------------------------------------------
 def  saveServoJSON( fileName ) :
 
-  global  srvCur, srvMin, srvMax
+  global  srvCur, srvMin, srvMax, lastSrv, gInc
 
   try :
 
-    data = { 'srvCur':srvCur, 'srvMin':srvMin, 'srvMax':srvMax }
+    data = { 'lastSrv':lastSrv, 'gInc':gInc,
+             'srvCur':srvCur, 'srvMin':srvMin, 'srvMax':srvMax }
 
     fOut = open( fileName, 'w' )
     json.dump( data, fOut )
