@@ -15,6 +15,11 @@ import re
 import json
 import time
 
+import Tkinter  as Tk
+import ttk      as Ttk
+
+from functools import partial
+
 from Adafruit_PWM_Servo_Driver import PWM
 
 
@@ -42,6 +47,11 @@ def  main() :
 
   print
   robot.dumpState()
+
+  robot.updateAllJoints()
+
+  window = MainWindow( robot )
+  window.mainLoop()
 
   sys.exit( 0 )
 
@@ -236,6 +246,159 @@ class  ServoRobot( object ) :
     s._pwm = PWM( 0x40 )  # Use PRM( 0x40, debug=True ) for debug output
 
     s._pwm.setPWMFreq( 60 )  # Set frequency to 60 Hertz
+
+
+# =============================================================================
+class  MainWindow( object ) :
+
+  # ---------------------------------------------------------------------------
+  def  __init__( s, robot ) :
+
+    s._root = Tk.Tk()
+
+    s._robot = robot
+
+    s._layoutWindow()
+
+    s._updatePositionFields()
+
+
+  # ---------------------------------------------------------------------------
+  def  mainLoop( s ) :
+
+    s._root.mainloop()
+
+
+  # ---------------------------------------------------------------------------
+  def  _updatePositionFields( s ) :  # Update all joint position fields
+
+    for j in range( 0, 7 ) :
+
+      s._jFieldNum[ j ].set( s._robot.getJoint(j) )
+
+
+  # ---------------------------------------------------------------------------
+  def  _handleSet( s, jNum ) :  # Handle Set Button
+
+    # print '_handleSet( %d ) called' % jNum
+
+    newVal = float( s.jFieldNum[ j ].get() )
+    s._robot.setJoint( jNum, newVal )
+    s._robot.updateJoint( jNum )
+    s._updatePositionFields()
+
+
+  # ---------------------------------------------------------------------------
+  def  _handleLDec( s, jNum ) :  # Handle Large-Decrement Button
+
+    # print '_handleLDec( %d ) called' % jNum
+    
+    newVal = s._robot.getJoint( jNum ) - 10
+    s._robot.setJoint( jNum, newVal )
+    s._robot.updateJoint( jNum )
+    s._updatePositionFields()
+
+
+  # ---------------------------------------------------------------------------
+  def  _handleSDec( s, jNum ) :  # Handle Small-Decrement Button
+
+    # print '_handleSDec( %d ) called' % jNum
+
+    newVal = s._robot.getJoint( jNum ) - 1
+    s._robot.setJoint( jNum, newVal )
+    s._robot.updateJoint( jNum )
+    s._updatePositionFields()
+
+
+  # ---------------------------------------------------------------------------
+  def  _handleSInc( s, jNum ) :  # Handle Small-Increment Button
+
+    # print '_handleSInc( %d ) called' % jNum
+
+    newVal = s._robot.getJoint( jNum ) + 1
+    s._robot.setJoint( jNum, newVal )
+    s._robot.updateJoint( jNum )
+    s._updatePositionFields()
+
+
+  # ---------------------------------------------------------------------------
+  def  _handleLInc( s, jNum ) :  # Handle Large-Increment Button
+
+    # print '_handleLInc( %d ) called' % jNum
+
+    newVal = s._robot.getJoint( jNum ) + 10
+    s._robot.setJoint( jNum, newVal )
+    s._robot.updateJoint( jNum )
+    s._updatePositionFields()
+
+
+  # ---------------------------------------------------------------------------
+  def  _layoutWindow( s ) :
+
+    s._poseListFrame = Tk.LabelFrame( s._root, text='Poses', padx=5, pady=5 )
+    s._poseFrame = Tk.LabelFrame( s._root, text='Joint-Pose', padx=5, pady=5 )
+
+    s._poseListFrame.grid( row=0, column=0, sticky=Tk.NSEW )
+    s._poseFrame.grid(     row=1, column=0 )
+
+    s._junk1 = Tk.Label( s._poseListFrame, text='Not Implemented Yet' )
+    s._junk1.grid( row=0 )
+
+    s._jLabel = [ Tk.Label( s._poseFrame, text='Joint 0 - Base'     ),
+                  Tk.Label( s._poseFrame, text='Joint 1 - Angle'    ),
+                  Tk.Label( s._poseFrame, text='Joint 2 - Parallel' ),
+                  Tk.Label( s._poseFrame, text='Joint 3 - Wrist 1'  ),
+                  Tk.Label( s._poseFrame, text='Joint 4 - Wrist 2'  ),
+                  Tk.Label( s._poseFrame, text='Joint 5 - Wrist 3'  ),
+                  Tk.Label( s._poseFrame, text='Joint 6 - Gripper'  ) ]
+
+    s._jFieldNum = [ ]
+    s._jField = [ ]
+    for j in range( 0, 7 ) :
+      s._jFieldNum += [ Tk.DoubleVar() ]
+      s._jField += [ Tk.Entry( s._poseFrame, width=7,
+                               textvariable=s._jFieldNum[ j ] ) ]
+
+    s._jBSet = [ ]
+    for j in range( 0, 7 ) :
+      s._jBSet += [ Tk.Button( s._poseFrame, text='Set',
+                               command=partial(s._handleSet,j) ) ]
+
+    s._jBLDec = [ ]  # Large decrement
+    for j in range( 0, 7 ) :
+      s._jBLDec += [ Tk.Button( s._poseFrame, text='<<',
+                                command=partial(s._handleLDec,j) ) ]
+
+    s._jBSDec = [ ]  # Small decrement
+    for j in range( 0, 7 ) :
+      s._jBSDec += [ Tk.Button( s._poseFrame, text='<',
+                                command=partial(s._handleSDec,j) ) ]
+
+    s._jBSInc = [ ]  # Small increment
+    for j in range( 0, 7 ) :
+      s._jBSInc += [ Tk.Button( s._poseFrame, text='>',
+                                command=partial(s._handleSInc,j) ) ]
+
+    s._jBLInc = [ ]  # Large increment
+    for j in range( 0, 7 ) :
+      s._jBLInc += [ Tk.Button( s._poseFrame, text='>>',
+                                command=partial(s._handleLInc,j) ) ]
+
+    j = 6
+
+    for r in range( 0, 7 ) :  # Loop over rows
+
+      s._jLabel[j].grid( row=r, column=0, sticky=Tk.W )  # Labels for joints
+      s._jBLDec[j].grid( row=r, column=1 )               # Large dec buttons
+      s._jBSDec[j].grid( row=r, column=2 )               # Small dec buttons
+      s._jField[j].grid( row=r, column=3 )               # Value input fields
+      s._jBSet[j].grid(  row=r, column=4, sticky=Tk.W )  # Set buttons
+      s._jBSInc[j].grid( row=r, column=5 )               # Small inc buttons
+      s._jBLInc[j].grid( row=r, column=6 )               # Large inc buttons
+
+      j -= 1
+
+    # End:  for r in range( 0, 7 )
 
 
 # =============================================================================
